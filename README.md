@@ -6,7 +6,9 @@ python3 parse_file filename.ts
 OR
 python3 parse_file filename.py
 
+
 # NOTE THAT COMMENT PARSING IS EXTENSION DEPENDENT
+Any other file will throw assertion error
 
 I have prepared the following solution in:
 Python using BNF grammar parsing
@@ -20,7 +22,7 @@ Only the following snippet is however, necessary for our purposes. It has been e
 ```
 <TODO> :: #"TODO:"
 <TODOComment> :: TODO CommentContent
-<CommentContent> :: TODOComment | #".*" CommentContent |""
+<CommentContent> :: TODOComment | #"." CommentContent |""
 <LineBreak> :: #"(\n\r|\r\n)|[\n\r]"
 <SingleLineComment> ::= '//' CommentContent (LineBreak|"")
 <MultiLineComment> ::= '/*' InsideMultiLineComment* ('*/'|"")
@@ -43,6 +45,11 @@ Note the following:
 
 
 For python style code, the implementation needs to be changed a bit
+<SingleLineCommentPython> ::= '#[ ]. " CommentContent (LineBreak|"")
+<MultiLineCommentPython> ::= SingleLineCommentPython SingleLineCommentPython+
+<WhitespacePython> ::= <(MultiLineCommentPython| SingleLineCommentPython| LineBreak)>
+
+
 
 
 Please note the following edge cases and assumptions:
@@ -85,6 +92,4 @@ Note that \r\r\r and \n\n\n are three line breaks each
 
 #Case 5
 
-TODO:TODO: are considered two TODOs. However a TODO that's part of another word example (wTODO:) is not valid
-
-#Case 6
+TODO:TODO: are considered two TODOs.

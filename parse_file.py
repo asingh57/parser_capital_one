@@ -8,6 +8,9 @@ assert len(sys.argv) == 2
 total_lines_ct,comment_lines_ct,single_line_ct,comment_lines_block_ct,blocks_ct,todo_ct=1,0,0,0,0,0
 data=""
 
+extension = sys.argv[1].split('.')[-1]
+assert extension=="py" or extension=="ts"
+
 with open(sys.argv[1], 'r') as file: #open and read file
     data = file.read()
 
@@ -29,7 +32,7 @@ def todo_comment(in_str):#matches todo comment from the start and returns end of
         return todo_pos
     cc= comment_content(in_str[todo_pos:])
     if cc==-1:
-        return -1
+        return todo_pos
     return cc + todo_pos
     
 def comment_content(in_str):#matches comment content from the start and returns end of match index. -1 if no match
@@ -40,18 +43,21 @@ def comment_content(in_str):#matches comment content from the start and returns 
         return tdc
     
     end= -1
-    pattern = re.compile("^.*")
+    pattern = re.compile("^.")
     for m in pattern.finditer(in_str):
         end = m.end()
+        break
 
-
+    e2=0
     if(end!=-1):
         if end==len(in_str) or end==0:
             return end
-        end=comment_content(in_str[end:])
+        e2=comment_content(in_str[end:])
 
-    return end
-
+    if e2==-1:
+        return end
+    return end+e2
+    
 def line_break(in_str):#matches line break from the start and returns end of match index. -1 if no match
     pattern = re.compile("^((\n\r|\r\n)|[\n\r])")
     for m in pattern.finditer(in_str):
@@ -66,6 +72,7 @@ def single_line_comment(in_str):#matches single line comments from the start and
     global single_line_ct, comment_lines_ct
     for m in pattern.finditer(in_str):
         end= m.end()
+        break
     if (end==-1):
         return -1
 
@@ -152,6 +159,7 @@ def multi_line_comment(in_str):#matches block comment from the start and returns
     end=-1
     for m in pattern.finditer(in_str):
         end= m.end()
+        break
     if (end==-1):
         return -1
     global blocks_ct, comment_lines_block_ct, total_lines_ct, comment_lines_ct
@@ -170,8 +178,76 @@ def multi_line_comment(in_str):#matches block comment from the start and returns
     pattern = re.compile("^\*\/")
     for m in pattern.finditer(in_str):
         end_pt= m.end()
+        break
     
     return end_pt+hmc+end
+
+def single_line_comment_python(in_str):
+    pattern = re.compile("^[ ]*#")
+    end=-1
+    for m in pattern.finditer(in_str):
+        end= m.end()
+        break
+    if (end==-1 or end==0):
+        return -1
+    in_str=in_str[end:]
+    cc= comment_content(in_str)
+    if (cc==-1):
+        cc=0
+    in_str=in_str[cc:]
+    lb= line_break(in_str)
+    if lb==-1 or lb==0:
+        return end+ cc
+    return end+ cc + lb
+        
+    
+def multi_line_comment_python(in_str):
+    ct=0
+    ret=0
+    old_ret=0
+    global total_lines_ct
+    global todo_ct
+    old_line_ct= total_lines_ct
+    old_todo_ct=todo_ct
+    while(ret!=-1):
+        old_ret+=ret
+        ret=single_line_comment_python(in_str)
+        if ret==-1 or ret==0:
+            break
+        if ret==len(in_str):
+            old_ret+=ret
+            ct+=1
+            break
+        in_str=in_str[ret:]
+        ct+=1
+    if ct<2:
+        total_lines_ct=old_line_ct
+        todo_ct=old_todo_ct
+        return -1
+    
+    global comment_lines_block_ct,comment_lines_ct,blocks_ct
+    comment_lines_block_ct+=ct
+    comment_lines_ct+=ct
+    blocks_ct+=1
+    return old_ret
+
+    
+def whitespace_python(in_str):
+    pattern = re.compile("^ +")
+    for m in pattern.finditer(in_str):
+        return m.end()
+    ret=multi_line_comment_python(in_str)
+    if (ret!=-1):
+        return ret    
+    ret=single_line_comment_python(in_str)
+    if (ret!=-1):
+        global comment_lines_ct, single_line_ct
+        comment_lines_ct+=1
+        single_line_ct+=1
+        return ret
+    ret= line_break(in_str)
+    return ret
+
 
 def whitespace(in_str):
     pattern = re.compile("^ +")
@@ -196,7 +272,11 @@ def ws_opt(in_str):
     old_ret=0
     while(ret!=-1):
         old_ret+=ret
-        ret = whitespace(in_str)
+        global extension
+        if extension=="py": #branch into python parsing
+            ret = whitespace_python(in_str)
+        else:        
+            ret = whitespace(in_str)
         if (ret==len(in_str)):
             return old_ret+ret
         in_str=in_str[ret:]
@@ -234,6 +314,7 @@ def code(in_str):
 
 
 print(code(data))
+#print(code("# TODO:\n\n"))
 
 print(
 " Total # of lines:",total_lines_ct,"\n",
