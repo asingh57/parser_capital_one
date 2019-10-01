@@ -93,3 +93,25 @@ Note that \r\r\r and \n\n\n are three line breaks each
 #Case 5
 
 TODO:TODO: are considered two TODOs.
+
+#Case 6
+```
+/*
+
+*/
+```
+AND 
+```
+/*
+*
+*/
+```
+are both 3 lines of block comments
+
+#Case 7
+```
+a=10&#35;THIS IS AN INT
+&#35; THIS IS B
+```
+
+The above is one code block (not two individual line comments)
